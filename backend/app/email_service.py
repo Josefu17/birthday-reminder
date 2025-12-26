@@ -5,13 +5,14 @@ from email.message import EmailMessage
 from app.logger import logger
 
 # TODO: In production, use Pydantic Settings or python-dotenv, yb
-EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 465
 
 
 def send_birthday_email(friend_name: str, days_until: int):
+    EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+    EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+
     if not EMAIL_ADDRESS or not EMAIL_PASSWORD:
         logger.warn("⚠️ Email credentials not set. Skipping email.")
         return
@@ -31,7 +32,6 @@ def send_birthday_email(friend_name: str, days_until: int):
     msg.set_content(body)
 
     try:
-        logger.info("Trying sending email")
         with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as smtp:
             smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
             smtp.send_message(msg)

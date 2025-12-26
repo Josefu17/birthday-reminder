@@ -17,7 +17,6 @@ def check_birthdays_job():
         4. Find friends with that birthday.
         5. Send emails.
         """
-    logger.debug("Checking birthdays...")
     db = database.SessionLocal()
 
     try:
@@ -38,6 +37,8 @@ def check_birthdays_job():
             target_date = today + timedelta(days=rule.days_before)
 
             friends = crud.get_friends_with_birthday_on_day(db, target_date.month, target_date.day)
+            if len(friends) > 0:
+                logger.info(f"Found {len(friends)} friends with birthday on {target_date.day}/{target_date.month}, sending emails...")
 
             for friend in friends:
                 logger.info(f"   -> Sending reminder for {friend.full_name}")
@@ -54,6 +55,6 @@ def start_scheduler():
     # scheduler.add_job(check_birthdays_job, 'cron', minute=0)
 
     # This runs the job every 30 seconds so you can see if it works immediately.
-    scheduler.add_job(check_birthdays_job, 'interval', seconds=5)
+    scheduler.add_job(check_birthdays_job, 'interval', seconds=10)
     scheduler.start()
     logger.info("Scheduler started...")

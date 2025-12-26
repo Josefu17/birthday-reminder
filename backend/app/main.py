@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -8,6 +9,8 @@ from .exceptions import DuplicateRuleError, RuleNotFoundError
 from .scheduler import start_scheduler, scheduler
 
 models.Base.metadata.create_all(bind=database.engine)
+
+load_dotenv()
 
 
 @asynccontextmanager
