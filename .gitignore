@@ -1,5 +1,7 @@
 .idea
-.env
+backend/.env
+*.env
+*.log
 
 __pycache__/
 .pyc

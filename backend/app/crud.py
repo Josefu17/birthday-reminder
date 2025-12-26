@@ -1,8 +1,19 @@
+from sqlalchemy import extract
 from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .exceptions import DuplicateRuleError, RuleNotFoundError
 from .models import Friend, NotificationRule
+
+
+def get_friends_with_birthday_on_day(db: Session, month: int, day: int):
+    """
+    Finds friends whose birthday month and day match the arguments.
+    """
+    return db.query(models.Friend).filter(
+        extract('month', models.Friend.birthday) == month,
+        extract('day', models.Friend.birthday) == day
+    ).all()
 
 
 # GET

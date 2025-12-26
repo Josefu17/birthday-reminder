@@ -1,12 +1,25 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from . import database, models, schemas, crud
 from .exceptions import DuplicateRuleError, RuleNotFoundError
+from .scheduler import start_scheduler, scheduler
 
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Startup:
+    start_scheduler()
+    yield
+    # Shutdown (cleanup)
+    scheduler.shutdown()
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 # Dependency
