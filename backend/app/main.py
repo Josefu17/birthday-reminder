@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from . import database, models, schemas, crud
+from .exceptions import DuplicateRuleError, RuleNotFoundError
 
 models.Base.metadata.create_all(bind=database.engine)
 
@@ -55,29 +56,27 @@ def read_rules(db: Session = Depends(get_db)):
 
 
 @app.post("/rules/", response_model=schemas.Rule)
-def create_rule(rule: schemas.RuleCreate, db: Session = Depends(get_db)) -> models.NotificationRule:
-    return crud.create_rule(db=db, rule=rule)
+def create_rule(rule: schemas.RuleCreate, db: Session = Depends(get_db)):
+    try:
+        return crud.create_rule(db=db, rule=rule)
+    except DuplicateRuleError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.put("/rules/{rule_id}", response_model=schemas.Rule)
 def update_rule(rule_id: int, rule_update: schemas.RuleUpdate, db: Session = Depends(get_db)) -> models.NotificationRule:
-    updated_rule = crud.update_rule(db, rule_id, rule_update)
-
-    if updated_rule is None:
+    try:
+        return crud.update_rule(db, rule_id, rule_update)
+    except RuleNotFoundError:
         raise HTTPException(status_code=404, detail="Rule not found")
-
-    # TODO not implemented yet, yb
-    # if updated_rule == "DUPLICATE":
-    #     raise HTTPException(status_code=404, detail="Rule already exists")
-
-    return updated_rule
+    except DuplicateRuleError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.delete("/rules/{rule_id}", response_model=schemas.DeleteResponse)
 def delete_rule(rule_id: int, db: Session = Depends(get_db)) -> schemas.DeleteResponse:
-    db_rule = crud.delete_rule(db, rule_id)
-
-    if db_rule is None:
-        raise HTTPException(status_code=404, detail="Friend not found")
-
-    return schemas.DeleteResponse(status="deleted", id=rule_id)
+    try:
+        crud.delete_rule(db, rule_id)
+        return schemas.DeleteResponse(status="deleted", id=rule_id)
+    except RuleNotFoundError:
+        raise HTTPException(status_code=404, detail="Rule not found")

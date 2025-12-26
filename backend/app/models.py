@@ -19,4 +19,5 @@ class NotificationRule(Base):
     # unique, so that same day rule isn't persisted twice
     days_before = Column(Integer, unique=True)  # 0 = same day, 1 = one day ago
 
-# TODO make rule also contain the hour info (hour of the day), yb
+    # New column for the hour (0-23)
+    hour = Column(Integer, default=10, nullable=False)

@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 
 from . import models, schemas
-from .models import Friend
+from .exceptions import DuplicateRuleError, RuleNotFoundError
+from .models import Friend, NotificationRule
 
 
 # GET
@@ -67,7 +68,18 @@ def get_rule(db: Session, rule_id: int) -> models.NotificationRule | None:
 
 # CREATE
 def create_rule(db: Session, rule: schemas.RuleCreate) -> models.NotificationRule:
-    db_rule = models.NotificationRule(days_before=rule.days_before)
+    # Check for existing rule with same days_before
+    existing_rule = db.query(models.NotificationRule).filter(
+        models.NotificationRule.days_before == rule.days_before
+    ).first()
+
+    if existing_rule:
+        raise DuplicateRuleError(f"Rule with days_before={rule.days_before} already exists")
+
+    db_rule = models.NotificationRule(
+        days_before=rule.days_before,
+        hour=rule.hour
+    )
     db.add(db_rule)
     db.commit()
     db.refresh(db_rule)
@@ -76,37 +88,39 @@ def create_rule(db: Session, rule: schemas.RuleCreate) -> models.NotificationRul
 
 
 # UPDATE
-def update_rule(db: Session, rule_id: int, rule_update: schemas.RuleUpdate):
+def update_rule(db: Session, rule_id: int, rule_update: schemas.RuleUpdate) -> NotificationRule:
     db_rule = get_rule(db, rule_id)
 
     if not db_rule:
-        return None
+        raise RuleNotFoundError(f"Rule with id {rule_id} not found")
 
-    existing_rule_for_days = db.query(models.NotificationRule).filter(
-        models.NotificationRule.days_before == rule_update.days_before).first()
+    if rule_update.days_before is not None:
+        existing_rule = db.query(models.NotificationRule).filter(
+            models.NotificationRule.days_before == rule_update.days_before
+        ).first()
 
-    if existing_rule_for_days:
-        # TODO handle accordingly (reject update with a message?)
-        return None
+        if existing_rule and existing_rule.id != rule_id:
+            raise DuplicateRuleError("Rule already exists")
 
-    # TODO clarify: what to do if db_rule days == rule_update.days -> implicitly update or ignore?
+        db_rule.days_before = rule_update.days_before
 
-    db_rule.days_before = rule_update.days_before
+    if rule_update.hour is not None:
+        db_rule.hour = rule_update.hour
+
     db.commit()
     db.refresh(db_rule)
 
     return db_rule
 
 
-# TODO continue from here, yb
-
-
 # DELETE
 def delete_rule(db: Session, rule_id: int) -> models.NotificationRule | None:
     db_rule = get_rule(db, rule_id)
 
-    if db_rule:
-        db.delete(db_rule)
-        db.commit()
+    if not db_rule:
+        raise RuleNotFoundError(f"Rule with id {rule_id} not found")
+
+    db.delete(db_rule)
+    db.commit()
 
     return db_rule

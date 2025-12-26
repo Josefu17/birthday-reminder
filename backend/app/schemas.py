@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Annotated
 
-from pydantic import BaseModel, BeforeValidator, PlainSerializer
+from pydantic import BaseModel, BeforeValidator, PlainSerializer, field_validator
 
 
 def parse_date(v):
@@ -48,6 +48,14 @@ class Friend(FriendBase):
 
 class RuleBase(BaseModel):
     days_before: int
+    hour: int = 10  # Default to 10 AM
+
+    @field_validator('hour')
+    @classmethod
+    def hour_validator(cls, v: int):
+        if not 0 <= v <= 23:
+            raise ValueError("Hour must be between 0 and 23")
+        return v
 
 
 class RuleCreate(RuleBase):
@@ -55,7 +63,16 @@ class RuleCreate(RuleBase):
 
 
 class RuleUpdate(RuleBase):
-    pass
+    # Both optional so we can patch just one field
+    days_before: int | None = None
+    hour: int | None = None
+
+    @field_validator('hour')
+    @classmethod
+    def hour_validator(cls, v: int):
+        if not 0 <= v <= 23:
+            raise ValueError("Hour must be between 0 and 23")
+        return v
 
 
 class Rule(RuleBase):
