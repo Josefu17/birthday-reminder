@@ -21,3 +21,9 @@ class NotificationRule(Base):
 
     # New column for the hour (0-23)
     hour = Column(Integer, default=10, nullable=False)
+
+    def __repr__(self):
+        return f"<NotificationRule(id={self.id}, days_before={self.days_before}, hour={self.hour})>"
+
+    def __str__(self):
+        return f"Remind {self.days_before} days before at {self.hour}:00"

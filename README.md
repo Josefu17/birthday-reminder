@@ -2,13 +2,17 @@
 
 ### Work in Progress (Please come back later : ) )
 
-
-TODO / FEATURES:
-the email reminder (global rules, not configurable per-entry -> would be kind of overkill..)
-- making the email address configurable? (receiver and the sender or just the receiver)
-
+TODO:
+- configurable email address via the UI or the .env
+- FRONTEND!
+- address open todos
 - deploy this on a raspberry pi and enjoy!
 - add the final README at the end
+
+
+FEATURES:
+- the email reminder with different/multiple rules and friend/person entries
+  - rules are configurable globally, not per-user basis (that'd be overkill.)
 
 DONE:
 - CRUD operations on friends

@@ -2,56 +2,46 @@ from datetime import datetime, date, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from app import database, models, email_service, crud
+from app import database, email_service, crud
 from app.logger import logger
 
 scheduler = AsyncIOScheduler()
 
 
 def check_birthdays_job():
-    """
-        Runs every hour.
-        1. Get current hour.
-        2. Find rules configured for this hour.
-        3. For each rule, calculate the target birthday date.
-        4. Find friends with that birthday.
-        5. Send emails.
-        """
-    db = database.SessionLocal()
+    logger.info("Running birthdays check...")
 
-    try:
-        current_hour = datetime.now().hour
-        today = date.today()
+    with database.SessionLocal() as db:
+        try:
+            current_hour = datetime.now().hour
+            today = date.today()
 
-        rules = db.query(models.NotificationRule).filter(
-            models.NotificationRule.hour == current_hour
-        ).all()
+            rules = crud.get_rules_by_hour(db, current_hour)
 
-        if not rules:
-            logger.debug(f"Hour {current_hour}: No rules scheduled.")
-            return
+            if not rules:
+                logger.debug(f"Hour {current_hour}: No rules scheduled.")
+                return
 
-        logger.info(f"Hour {current_hour}: Processing {len(rules)} rules...")
+            logger.info(f"Hour {current_hour}: Processing {len(rules)} rule(s)...")
 
-        for rule in rules:
-            target_date = today + timedelta(days=rule.days_before)
+            for rule in rules:
+                logger.info(f"Processing rule: {rule}")
+                target_date = today + timedelta(days=rule.days_before)
 
-            friends = crud.get_friends_with_birthday_on_day(db, target_date.month, target_date.day)
-            if len(friends) > 0:
-                logger.info(f"Found {len(friends)} friends with birthday on {target_date.day}/{target_date.month}, sending emails...")
+                friends = crud.get_friends_with_birthday_on_day(db, target_date.month, target_date.day)
+                if friends:
+                    logger.info(f"Found {len(friends)} friend(s) for {target_date.strftime('%d.%m')}")
 
-            for friend in friends:
-                logger.info(f"   -> Sending reminder for {friend.full_name}")
-                email_service.send_birthday_email(friend.full_name, rule.days_before)
-
-    except Exception as e:
-        logger.error(f"Scheduler Error: {e}", exc_info=True)
-    finally:
-        db.close()
+                for friend in friends:
+                    logger.info(f"   -> Sending reminder for {friend.full_name}")
+                    email_service.send_birthday_email(friend.full_name, rule.days_before)
+        except Exception as e:
+            logger.error(f"Scheduler Error: {e}", exc_info=True)
 
 
 def start_scheduler():
     # --- PROD MODE (Once per hour) ---
+    # TODO toggle this in at the end of the project, yb
     # scheduler.add_job(check_birthdays_job, 'cron', minute=0)
 
     # This runs the job every 30 seconds so you can see if it works immediately.
